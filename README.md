@@ -1,4 +1,3 @@
-# SY_BORG_jobBoard.github.io
 ```html
 <!doctype html>
 <html lang="en">
