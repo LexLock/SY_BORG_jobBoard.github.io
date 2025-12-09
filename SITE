@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CY_BORG // Job Board</title>
+  <style>
+    :root{
+      --bg:#05060a;
+      --panel:#0c0f17;
+      --ink:#c9d0ff;
+      --muted:#7a87b7;
+      --hi1:#2cf5a2;
+      --hi2:#ff3ea5;
+      --warn:#ffbf00;
+      --danger:#ff2f4e;
+      --ok:#3ee86c;
+      --line:rgba(255,255,255,0.1);
+      --shadow:0 0 1px #fff, 0 0 8px var(--hi1), 0 0 18px var(--hi2);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+      --radius: 10px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(1200px 800px at 20% 10%, #0a0c12 0%, transparent 60%),
+                  radial-gradient(900px 600px at 80% 70%, #0b0e16 0%, transparent 55%),
+                  var(--bg);
+      color:var(--ink);
+      font-family:var(--sans);
+      letter-spacing:0.2px;
+    }
+    .scanline::after{
+      content:"";
+      pointer-events:none;
+      position:fixed;inset:0;
+      background: repeating-linear-gradient(transparent,transparent 2px, rgba(255,255,255,0.03) 3px);
+      mix-blend-mode:overlay;
+      animation:flicker 6s infinite steps(60);
+    }
+    @keyframes flicker{
+      0%,19%,21%,23%,80%,100%{opacity:1}
+      20%,22%{opacity:.85}
+      81%{opacity:.95}
+    }
+    .wrap{
+      max-width:1100px;margin:0 auto;padding:24px;
+    }
+    header{
+      display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px;
+    }
+    .logo{
+      font-family:var(--mono);
+      font-size: clamp(22px, 3.5vw, 36px);
+      font-weight:800;
+      letter-spacing:1.8px;
+      padding:10px 14px;
+      background:linear-gradient(90deg, rgba(44,245,162,0.15), rgba(255,62,165,0.15));
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      position:relative;
+      text-shadow: 0 0 6px rgba(44,245,162,.7), 0 0 12px rgba(255,62,165,.5);
+    }
+    .logo span{color:var(--hi2)}
+    .sub{
+      color:var(--muted);font-size:12px;opacity:.9
+    }
+    .toolbar{
+      display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 20px
+    }
+    input[type="text"], select, input[type="number"], input[type="date"]{
+      background:#0b0f18;color:var(--ink);border:1px solid var(--line);
+      padding:10px 12px;border-radius:8px;outline:none;min-width:0;
+    }
+    input::placeholder{color:#98a1d9aa}
+    .grow{flex:1 1 260px}
+    .btn{
+      background:transparent;color:var(--ink);
+      border:1px solid var(--line);padding:10px 12px;border-radius:8px;
+      cursor:pointer;font-weight:600;
+    }
+    .btn:hover{border-color:#2c3146;box-shadow:0 0 0 2px rgba(44,245,162,0.08) inset}
+    .btn.primary{
+      border-color:rgba(44,245,162,.5);
+      background:linear-gradient(180deg, rgba(44,245,162,0.12), rgba(44,245,162,0.04));
+      color:#dbffe9;
+    }
+    .btn.warn{
+      border-color:rgba(255,191,0,.4);
+      background:linear-gradient(180deg, rgba(255,191,0,0.14), rgba(255,191,0,0.05));
+      color:#fff6d6;
+    }
+    .btn.ghost{opacity:.85}
+    .grid{
+      display:grid;gap:12px;
+    }
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    }
+    .row{
+      display:flex;align-items:center;gap:10px;flex-wrap:wrap; padding:12px;
+      border-bottom:1px dashed rgba(255,255,255,0.07);
+    }
+    .row:last-child{border-bottom:none}
+    .title{
+      font-weight:800; letter-spacing:0.5px;
+      text-shadow:0 0 6px rgba(44,245,162,.35);
+    }
+    .pill{
+      font-family:var(--mono);
+      font-size:12px; padding:4px 8px; border-radius:99px;
+      border:1px solid var(--line); color:#dbe2ff88;
+    }
+    .tag{ border-color: rgba(255,62,165,.35); color:#ffd9ef; background: rgba(255,62,165,0.07)}
+    .hl{ color:#d7ffe3; border-color: rgba(44,245,162,.45); background: rgba(44,245,162,.06)}
+    .danger1{color:#c8ffe1}
+    .danger2{color:#fff0c0}
+    .danger3{color:#ffd2a8}
+    .danger4{color:#ffb0a8}
+    .danger5{color:#ff97a8}
+    .meta{color:var(--muted);font-size:12px}
+    .spacer{flex:1}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .desc{color:#dce1ffcc; line-height:1.5; white-space:pre-wrap}
+    .muted{color:var(--muted)}
+    .k{color:#9aa7ff}
+    .val{color:#fff}
+    .status{
+      font-family:var(--mono); font-size:12px; padding:3px 7px; border-radius:6px; border:1px dashed var(--line)
+    }
+    .status.open{color:#d6ffe9; border-color:#2cf5a266; background:rgba(44,245,162,0.06)}
+    .status.claimed{color:#ffefd6; border-color:#ffbf0080; background:rgba(255,191,0,0.07)}
+    .status.done{color:#ffdfe6; border-color:#ff2f4e80; background:rgba(255,47,78,0.06)}
+    .small{font-size:12px}
+    .list-empty{
+      opacity:.75; text-align:center; padding:40px 12px
+    }
+    .rule{
+      height:1px; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      margin:6px 0;
+    }
+    /* Modal */
+    .modal{
+      position: fixed; inset:0; display:none; align-items:center; justify-content:center; padding:16px;
+      background: rgba(2,4,8,0.7); backdrop-filter: blur(4px);
+    }
+    .modal.show{display:flex}
+    .sheet{
+      width:min(900px, 100%); background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden
+    }
+    .sheet .head{display:flex; align-items:center; gap:10px; padding:12px 12px; border-bottom:1px solid var(--line)}
+    .sheet .body{padding:12px}
+    .form-grid{
+      display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap:10px;
+    }
+    textarea{
+      min-height:120px; width:100%; resize:vertical;
+      background:#0b0f18;color:var(--ink);border:1px solid var(--line);
+      padding:10px 12px;border-radius:8px;outline:none;
+      font-family:var(--sans)
+    }
+    .foot{display:flex; gap:8px; justify-content:flex-end; padding:12px; border-top:1px solid var(--line)}
+    .alert{
+      border-left:3px solid var(--warn);
+      padding:8px 10px; background:rgba(255,191,0,0.06); color:#fff3cf; border-radius:8px; font-size:13px
+    }
+    .inline{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center
+    }
+    .right{margin-left:auto}
+    .sr-only{
+      position:absolute!important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;
+    }
+  </style>
+</head>
+<body class="scanline">
+  <div class="wrap">
+    <header>
+      <div class="logo" aria-label="CY_BORG Job Board">CY_BORG <span>// GIGS</span></div>
+      <div class="sub">Black-channel contracts. Dead drops. No refunds.</div>
+    </header>
+
+    <div class="toolbar">
+      <input id="q" class="grow" type="text" placeholder="Search title, faction, tags, text..." />
+      <select id="fStatus" title="Status filter">
+        <option value="">Status: any</option>
+        <option value="open">Open</option>
+        <option value="claimed">Claimed</option>
+        <option value="done">Completed</option>
+      </select>
+      <select id="fFaction" title="Faction filter">
+        <option value="">Faction: any</option>
+      </select>
+      <select id="fTag" title="Tag filter">
+        <option value="">Tag: any</option>
+      </select>
+      <select id="fDanger" title="Min danger">
+        <option value="">Danger: any</option>
+        <option value="1">1+</option>
+        <option value="2">2+</option>
+        <option value="3">3+</option>
+        <option value="4">4+</option>
+        <option value="5">5 only</option>
+      </select>
+      <select id="sort" title="Sort">
+        <option value="expires">Sort: Expires soon</option>
+        <option value="new">Sort: Newest</option>
+        <option value="payout">Sort: Highest payout</option>
+        <option value="danger">Sort: Most dangerous</option>
+      </select>
+      <button id="btnAdd" class="btn primary">+ New Gig</button>
+      <button id="btnExport" class="btn ghost">Export</button>
+      <label class="btn ghost" for="fileImport">Import</label>
+      <input id="fileImport" type="file" accept="application/json" class="sr-only" />
+      <button id="btnReset" class="btn warn" title="Reset to sample data">Reset</button>
+    </div>
+
+    <div id="list" class="grid"></div>
+    <div id="empty" class="list-empty" style="display:none">No gigs match the filter. Try clearing filters or add a new one.</div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="sheet" role="document">
+      <div class="head">
+        <div class="title" id="formTitle">New Gig</div>
+        <div class="spacer"></div>
+        <button id="closeModal" class="btn">Close</button>
+      </div>
+      <div class="body">
+        <div class="alert small">Tip: separate tags with commas. Danger is 1–5. Expires is the in-world deadline.</div>
+        <div class="form-grid" style="margin-top:10px">
+          <div>
+            <label class="small muted">Title</label>
+            <input id="fTitle" type="text" placeholder="e.g., Ghost the CFO of SiloDyne" />
+          </div>
+          <div>
+            <label class="small muted">Faction / Client</label>
+            <input id="fFactionIn" type="text" placeholder="e.g., The Syndicate / Blackgate" />
+          </div>
+          <div>
+            <label class="small muted">Payout (credits)</label>
+            <input id="fPayout" type="number" min="0" step="100" placeholder="5000" />
+          </div>
+          <div>
+            <label class="small muted">Danger (1–5)</label>
+            <input id="fDanger" type="number" min="1" max="5" placeholder="3" />
+          </div>
+          <div>
+            <label class="small muted">Tags</label>
+            <input id="fTags" type="text" placeholder="stealth, corp, extraction" />
+          </div>
+          <div>
+            <label class="small muted">Location</label>
+            <input id="fLocation" type="text" placeholder="Sector 7 / Dockside" />
+          </div>
+          <div>
+            <label class="small muted">Expires</label>
+            <input id="fExpires" type="date" />
+          </div>
+          <div>
+            <label class="small muted">Contact / Handle</label>
+            <input id="fContact" type="text" placeholder="@helios | dead drop: Locker 404" />
+          </div>
+          <div style="grid-column: 1/-1">
+            <label class="small muted">Brief</label>
+            <textarea id="fDesc" placeholder="Short mission write-up, constraints, complications..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="foot">
+        <button id="btnDelete" class="btn warn" style="margin-right:auto; display:none">Delete</button>
+        <button id="btnSave" class="btn primary">Save Gig</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  ;(() => {
+    const $ = s => document.querySelector(s)
+    const $$ = s => Array.from(document.querySelectorAll(s))
+    const storeKey = 'cy_borg_gigs_v1'
+
+    const state = {
+      gigs: [],
+      filter: { q:'', status:'', faction:'', tag:'', danger:'', sort:'expires' },
+      editingId: null
+    }
+
+    const el = {
+      list: $('#list'),
+      empty: $('#empty'),
+      q: $('#q'),
+      fStatus: $('#fStatus'),
+      fFaction: $('#fFaction'),
+      fTag: $('#fTag'),
+      fDanger: $('#fDanger'),
+      sort: $('#sort'),
+      btnAdd: $('#btnAdd'),
+      btnExport: $('#btnExport'),
+      btnReset: $('#btnReset'),
+      fileImport: $('#fileImport'),
+      modal: $('#modal'),
+      closeModal: $('#closeModal'),
+      formTitle: $('#formTitle'),
+      fTitle: $('#fTitle'),
+      fFactionIn: $('#fFactionIn'),
+      fPayout: $('#fPayout'),
+      fDanger: $('#fDanger'),
+      fTags: $('#fTags'),
+      fLocation: $('#fLocation'),
+      fExpires: $('#fExpires'),
+      fContact: $('#fContact'),
+      fDesc: $('#fDesc'),
+      btnSave: $('#btnSave'),
+      btnDelete: $('#btnDelete'),
+    }
+
+    function uid(){ return Math.random().toString(36).slice(2) + Date.now().toString(36) }
+
+    function load(){
+      const raw = localStorage.getItem(storeKey)
+      if(raw){
+        try { state.gigs = JSON.parse(raw) } catch(e){ state.gigs = [] }
+      }
+      if(!state.gigs?.length){
+        state.gigs = seed()
+        persist()
+      }
+      refreshFilters()
+      render()
+    }
+
+    function persist(){
+      localStorage.setItem(storeKey, JSON.stringify(state.gigs))
+    }
+
+    function seed(){
+      const today = new Date()
+      const plus = d => new Date(today.getTime()+d*86400000).toISOString().slice(0,10)
+      return [
+        {
+          id: uid(),
+          title: "Blackglass Heist",
+          faction: "SiloDyne Internal",
+          payout: 9000,
+          danger: 4,
+          tags: ["stealth","corp","data"],
+          location: "Arcology 6, Level -22",
+          expires: plus(5),
+          contact: "Proxy 'Canary' — dead drop: bin 7F",
+          description: "Lift a quantum blackglass shard from the lab vault. Cameras looped for 11 minutes at 03:12. Two ICE layers on the door. No casualties on-site, or the contract voids.",
+          status: "open",
+          createdAt: Date.now()
+        },
+        {
+          id: uid(),
+          title: "Noise at the Docks",
+          faction: "Dock Union 404",
+          payout: 3500,
+          danger: 2,
+          tags: ["sabotage","industrial"],
+          location: "Dry Dock 3B",
+          expires: plus(2),
+          contact: "Foreman Vex — channel: 7k-ghost",
+          description: "Jam a rival's crane telemetry. Make it look like 'weather'. Bonus if their shift boss gets spooked and calls off the night run.",
+          status: "open",
+          createdAt: Date.now()-86400000
+        },
+        {
+          id: uid(),
+          title: "Ghost the CFO",
+          faction: "Blackgate",
+          payout: 15000,
+          danger: 5,
+          tags: ["wetwork","vip","urban"],
+          location: "Skyline Spire, Penthouse",
+          expires: plus(3),
+          contact: "Agent Helios — @helios",
+          description: "Hard kill, soft footprint. Body must not be found on-site. Expect 2–3 bodyguards, drone overwatch, panic room.",
+          status: "claimed",
+          createdAt: Date.now()-3600_000
+        },
+        {
+          id: uid(),
+          title: "Scrap Ferry Escort",
+          faction: "Rust Saints",
+          payout: 4800,
+          danger: 3,
+          tags: ["escort","vehicle","open-water"],
+          location: "Estuary Route K",
+          expires: plus(7),
+          contact: "Dock chapel node | code: SAINT-77",
+          description: "Keep raiders off a slow barge for 12km. No heavy ordnance near the reactor pods.",
+          status: "open",
+          createdAt: Date.now()-7200_000
+        },
+        {
+          id: uid(),
+          title: "Counter-Message",
+          faction: "CityNet Moderation (off-books)",
+          payout: 2600,
+          danger: 1,
+          tags: ["net","social","lowrisk"],
+          location: "Anywhere",
+          expires: plus(1),
+          contact: "ticket: CN-17-663",
+          description: "Drown a viral clip with seeded counter-memes. 24h window. Avoid obvious botnets.",
+          status: "done",
+          createdAt: Date.now()-5*86400000
+        }
+      ]
+    }
+
+    function refreshFilters(){
+      const factions = [...new Set(state.gigs.map(g=>g.faction).filter(Boolean))].sort()
+      const tags = [...new Set(state.gigs.flatMap(g=>g.tags||[]))].sort((a,b)=>a.localeCompare(b))
+      el.fFaction.innerHTML = `<option value="">Faction: any</option>` + factions.map(f=>`<option>${escapeHtml(f)}</option>`).join('')
+      el.fTag.innerHTML = `<option value="">Tag: any</option>` + tags.map(t=>`<option>${escapeHtml(t)}</option>`).join('')
+    }
+
+    function escapeHtml(s=''){
+      return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))
+    }
+
+    function applyFilters(arr){
+      const f = state.filter
+      let out = arr.slice()
+
+      if(f.q){
+        const q = f.q.toLowerCase()
+        out = out.filter(g => [
+          g.title, g.faction, g.location, g.contact, g.description, (g.tags||[]).join(' ')
+        ].join(' ').toLowerCase().includes(q))
+      }
+      if(f.status) out = out.filter(g => g.status === f.status)
+      if(f.faction) out = out.filter(g => g.faction === f.faction)
+      if(f.tag) out = out.filter(g => (g.tags||[]).includes(f.tag))
+      if(f.danger){
+        const d = +f.danger
+        out = out.filter(g => d === 5 ? g.danger === 5 : g.danger >= d)
+      }
+      switch(f.sort){
+        case 'expires':
+          out.sort((a,b)=> (a.expires||'9999-12-31').localeCompare(b.expires||'9999-12-31') || b.danger - a.danger)
+          break;
+        case 'new':
+          out.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0))
+          break;
+        case 'payout':
+          out.sort((a,b)=> (b.payout||0) - (a.payout||0))
+          break;
+        case 'danger':
+          out.sort((a,b)=> (b.danger||0) - (a.danger||0))
+          break;
+      }
+      return out
+    }
+
+    function render(){
+      const gigs = applyFilters(state.gigs)
+      el.list.innerHTML = gigs.map(renderCard).join('')
+      el.empty.style.display = gigs.length ? 'none' : 'block'
+      // wire up card buttons
+      gigs.forEach(g => {
+        const root = document.querySelector(`[data-id="${g.id}"]`)
+        root?.querySelector('.toggle')?.addEventListener('click', () => {
+          root.classList.toggle('open')
+        })
+        root?.querySelector('.doClaim')?.addEventListener('click', () => updateStatus(g.id, 'claimed'))
+        root?.querySelector('.doDone')?.addEventListener('click', () => updateStatus(g.id, 'done'))
+        root?.querySelector('.doOpen')?.addEventListener('click', () => updateStatus(g.id, 'open'))
+        root?.querySelector('.doEdit')?.addEventListener('click', () => openEdit(g.id))
+      })
+    }
+
+    function renderCard(g){
+      const dangerCls = `danger${Math.min(5, Math.max(1, Number(g.danger)||1))}`
+      const statusCls = g.status === 'open' ? 'open' : g.status === 'claimed' ? 'claimed' : 'done'
+      const daysLeft = daysUntil(g.expires)
+      const due = g.expires ? `Due ${g.expires} ${daysLeft!=null?`(${daysLeft}d)`:''}` : 'No deadline'
+      return `
+      <div class="card" data-id="${g.id}">
+        <div class="row">
+          <div class="title">${escapeHtml(g.title||'Untitled')}</div>
+          <span class="pill hl">${escapeHtml(g.faction||'Freelance')}</span>
+          ${(g.tags||[]).slice(0,4).map(t=>`<span class="pill tag">#${escapeHtml(t)}</span>`).join('')}
+          <div class="spacer"></div>
+          <span class="pill">¢ ${Number(g.payout||0).toLocaleString()}</span>
+          <span class="pill ${dangerCls}" title="Danger (1–5)">D${g.danger||1}</span>
+          <span class="status ${statusCls}">${g.status||'open'}</span>
+          <button class="btn toggle">Details</button>
+        </div>
+        <div class="row" style="display:flex; gap:16px; align-items:flex-start">
+          <div style="flex:3 1 520px">
+            <div class="meta"><span class="k">Location:</span> <span class="val">${escapeHtml(g.location||'n/a')}</span> • <span class="k">Expires:</span> <span class="val">${escapeHtml(g.expires||'—')}</span> • <span class="k">Contact:</span> <span class="val">${escapeHtml(g.contact||'—')}</span></div>
+            <div class="rule"></div>
+            <div class="desc">${escapeHtml(g.description||'')}</div>
+          </div>
+          <div style="flex:1 1 220px">
+            <div class="meta muted small">Admin</div>
+            <div class="inline" style="margin:8px 0 10px">
+              <span class="pill">${due}</span>
+            </div>
+            <div class="actions">
+              ${g.status!=='claimed'?`<button class="btn doClaim">Mark Claimed</button>`:''}
+              ${g.status!=='done'?`<button class="btn doDone">Mark Done</button>`:''}
+              ${g.status!=='open'?`<button class="btn doOpen">Reopen</button>`:''}
+              <button class="btn doEdit">Edit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      `
+    }
+
+    function daysUntil(dateStr){
+      if(!dateStr) return null
+      const d = new Date(dateStr)
+      if(isNaN(d)) return null
+      const now = new Date()
+      return Math.ceil((d - new Date(now.toDateString()))/86400000)
+    }
+
+    // Status update
+    function updateStatus(id, status){
+      const g = state.gigs.find(x=>x.id===id)
+      if(!g) return
+      g.status = status
+      persist(); render()
+    }
+
+    // Modal helpers
+    function openNew(){
+      state.editingId = null
+      el.formTitle.textContent = 'New Gig'
+      el.btnDelete.style.display = 'none'
+      fillForm({})
+      showModal(true)
+    }
+    function openEdit(id){
+      state.editingId = id
+      const g = state.gigs.find(x=>x.id===id) || {}
+      el.formTitle.textContent = 'Edit Gig'
+      el.btnDelete.style.display = 'inline-flex'
+      fillForm(g)
+      showModal(true)
+    }
+    function fillForm(g){
+      el.fTitle.value = g.title||''
+      el.fFactionIn.value = g.faction||''
+      el.fPayout.value = g.payout??''
+      el.fDanger.value = g.danger??''
+      el.fTags.value = (g.tags||[]).join(', ')
+      el.fLocation.value = g.location||''
+      el.fExpires.value = g.expires||''
+      el.fContact.value = g.contact||''
+      el.fDesc.value = g.description||''
+    }
+    function readForm(){
+      const title = el.fTitle.value.trim()
+      const faction = el.fFactionIn.value.trim()
+      const payout = Number(el.fPayout.value||0)
+      const danger = clamp(Number(el.fDanger.value||1), 1, 5)
+      const tags = el.fTags.value.split(',').map(s=>s.trim()).filter(Boolean)
+      const location = el.fLocation.value.trim()
+      const expires = el.fExpires.value || ''
+      const contact = el.fContact.value.trim()
+      const description = el.fDesc.value.trim()
+      return { title, faction, payout, danger, tags, location, expires, contact, description }
+    }
+    function clamp(n,min,max){ return Math.max(min, Math.min(max, n)) }
+
+    function showModal(on){
+      el.modal.classList.toggle('show', !!on)
+      el.modal.setAttribute('aria-hidden', on ? 'false' : 'true')
+    }
+
+    // Events
+    el.q.addEventListener('input', e => { state.filter.q = e.target.value; render() })
+    el.fStatus.addEventListener('change', e => { state.filter.status = e.target.value; render() })
+    el.fFaction.addEventListener('change', e => { state.filter.faction = e.target.value; render() })
+    el.fTag.addEventListener('change', e => { state.filter.tag = e.target.value; render() })
+    el.fDanger.addEventListener('change', e => { state.filter.danger = e.target.value; render() })
+    el.sort.addEventListener('change', e => { state.filter.sort = e.target.value; render() })
+
+    el.btnAdd.addEventListener('click', openNew)
+    el.closeModal.addEventListener('click', () => showModal(false))
+    el.modal.addEventListener('click', (e)=>{ if(e.target === el.modal) showModal(false) })
+
+    el.btnSave.addEventListener('click', () => {
+      const data = readForm()
+      if(!data.title){
+        alert('Title is required.')
+        return
+      }
+      if(state.editingId){
+        const i = state.gigs.findIndex(x=>x.id===state.editingId)
+        if(i>-1) state.gigs[i] = {...state.gigs[i], ...data}
+      } else {
+        state.gigs.unshift({ id: uid(), status:'open', createdAt: Date.now(), ...data })
+      }
+      persist(); refreshFilters(); render(); showModal(false)
+    })
+
+    el.btnDelete.addEventListener('click', () => {
+      if(!state.editingId) return
+      const g = state.gigs.find(x=>x.id===state.editingId)
+      if(g && confirm(`Delete gig: "${g.title}"?`)){
+        state.gigs = state.gigs.filter(x=>x.id!==state.editingId)
+        persist(); refreshFilters(); render(); showModal(false)
+      }
+    })
+
+    el.btnExport.addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(state.gigs, null, 2)], {type:'application/json'})
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = 'cy_borg_gigs.json'; a.click()
+      URL.revokeObjectURL(url)
+    })
+
+    el.fileImport.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0]
+      if(!file) return
+      try{
+        const text = await file.text()
+        const data = JSON.parse(text)
+        if(!Array.isArray(data)) throw new Error('Invalid file')
+        // minimal sanity check
+        data.forEach(x => x.id = x.id || uid())
+        state.gigs = data
+        persist(); refreshFilters(); render()
+      }catch(err){
+        alert('Import failed: ' + err.message)
+      } finally {
+        e.target.value = ''
+      }
+    })
+
+    el.btnReset.addEventListener('click', () => {
+      if(confirm('Reset board to sample data? This overwrites your current gigs.')){
+        state.gigs = seed()
+        persist(); refreshFilters(); render()
+      }
+    })
+
+    // init
+    load()
+  })()
+  </script>
+</body>
+</html>
